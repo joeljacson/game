@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catch the Falling Stars</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: linear-gradient(to bottom, #1e3c72, #2a5298);
+      color: white;
+      font-family: 'Comic Sans MS', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #game-container {
+      position: relative;
+      width: 80vw;
+      height: 80vh;
+      background: url('https://www.transparenttextures.com/patterns/asfalt-dark.png');
+      border: 2px solid #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+    #basket {
+      position: absolute;
+      bottom: 10px;
+      width: 100px;
+      height: 20px;
+      background: linear-gradient(to bottom, #f39c12, #e67e22);
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    }
+    #star {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: yellow;
+      border-radius: 50%;
+      box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+      animation: twinkle 2s infinite ease-in-out;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; }
+    }
+    #score, #missed, #game-over, #start-screen {
+      position: absolute;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    #score {
+      top: 10px;
+      left: 10px;
+    }
+    #missed {
+      top: 10px;
+      right: 10px;
+    }
+    #game-over, #start-screen {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      display: none;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #e67e22;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: white;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    }
+    button:hover {
+      background-color: #d35400;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="basket"></div>
+    <div id="star"></div>
+    <div id="score">Score: 0</div>
+    <div id="missed">Missed: 0</div>
+    <div id="game-over">
+      <p>Game Over</p>
+      <p>Your Score: <span id="final-score">0</span></p>
+      <button onclick="startGame()">Restart</button>
+    </div>
+    <div id="start-screen">
+      <p>Catch the Falling Stars</p>
+      <button onclick="startGame()">Start Game</button>
+    </div>
+  </div>
+
+  <script>
+    let basket = document.getElementById('basket');
+    let star = document.getElementById('star');
+    let scoreDisplay = document.getElementById('score');
+    let missedDisplay = document.getElementById('missed');
+    let gameOverScreen = document.getElementById('game-over');
+    let startScreen = document.getElementById('start-screen');
+    let finalScore = document.getElementById('final-score');
+
+    let basketWidth = 100;
+    let basketHeight = 20;
+    let starWidth = 20;
+    let gameContainerWidth = document.getElementById('game-container').clientWidth;
+    let gameContainerHeight = document.getElementById('game-container').clientHeight;
+
+    let score = 0;
+    let missed = 0;
+    let starSpeed = 2;
+    let basketPosition = gameContainerWidth / 2 - basketWidth / 2;
+    let starPosition = { x: Math.random() * (gameContainerWidth - starWidth), y: 0 };
+    let starFallInterval;
+    let isGameOver = false;
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') {
+        basketPosition = Math.max(0, basketPosition - 10);
+      } else if (event.key === 'ArrowRight') {
+        basketPosition = Math.min(gameContainerWidth - basketWidth, basketPosition + 10);
+      }
+      basket.style.left = basketPosition + 'px';
+    });
+
+    function updateStarPosition() {
+      starPosition.y += starSpeed;
+      if (starPosition.y > gameContainerHeight) {
+        missed++;
+        if (missed >= 3) {
+          endGame();
+          return;
+        }
+        resetStar();
+      }
+
+      star.style.left = starPosition.x + 'px';
+      star.style.top = starPosition.y + 'px';
+
+      if (
+        starPosition.y + starWidth >= gameContainerHeight - basketHeight &&
+        starPosition.x + starWidth >= basketPosition &&
+        starPosition.x <= basketPosition + basketWidth
+      ) {
+        score++;
+        starSpeed += 0.1;
+        resetStar();
+      }
+
+      scoreDisplay.textContent = 'Score: ' + score;
+      missedDisplay.textContent = 'Missed: ' + missed;
+
+      if (!isGameOver) {
+        requestAnimationFrame(updateStarPosition);
+      }
+    }
+
+    function resetStar() {
+      starPosition = { x: Math.random() * (gameContainerWidth - starWidth), y: 0 };
+    }
+
+    function startGame() {
+      score = 0;
+      missed = 0;
+      starSpeed = 2;
+      isGameOver = false;
+      startScreen.style.display = 'none';
+      gameOverScreen.style.display = 'none';
+      basketPosition = gameContainerWidth / 2 - basketWidth / 2;
+      basket.style.left = basketPosition + 'px';
+      resetStar();
+      updateStarPosition();
+    }
+
+    function endGame() {
+      isGameOver = true;
+      gameOverScreen.style.display = 'block';
+      finalScore.textContent = score;
+    }
+
+    startScreen.style.display = 'block';
+  </script>
+</body>
+</html>
