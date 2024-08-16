@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Match Challenge</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(45deg, #3b5998, #8b9dc3, #dfe3ee);
+      background-size: 300% 300%;
+      animation: gradientAnimation 10s ease infinite;
+      color: #333;
+    }
+
+    @keyframes gradientAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    #gameContainer {
+      width: 90%;
+      max-width: 500px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+      text-align: center;
+      padding: 30px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    #gameContainer:hover {
+      transform: scale(1.05);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 2.5em;
+      color: #007BFF;
+      font-weight: bold;
+    }
+
+    #targetColor, #playerColor {
+      width: 100%;
+      height: 150px;
+      border-radius: 10px;
+      margin: 10px 0;
+      transition: background-color 0.5s;
+      position: relative;
+    }
+
+    #targetColor::before, #playerColor::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      border-radius: 10px;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    #targetColor::before {
+      background: url('https://via.placeholder.com/500x150/3b5998/fff?text=Target+Color');
+    }
+
+    #playerColor::before {
+      background: url('https://via.placeholder.com/500x150/8b9dc3/fff?text=Player+Color');
+    }
+
+    #targetColor:hover::before, #playerColor:hover::before {
+      opacity: 0.2;
+    }
+
+    .slider-container {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+    }
+
+    .slider-container label {
+      flex: 1;
+      font-weight: bold;
+    }
+
+    .slider-container input[type="range"] {
+      width: 100%;
+      margin: 0 10px;
+    }
+
+    #matchButton {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      background-color: #007BFF;
+      color: #fff;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #matchButton:hover {
+      background-color: #0056b3;
+    }
+
+    #feedback, #timer, #level {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+
+    #colorBlindToggle {
+      margin-top: 20px;
+    }
+
+    #leaderboard {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    #leaderboard h3 {
+      margin-bottom: 10px;
+    }
+
+    #leaderboard ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    #leaderboard li {
+      margin-bottom: 5px;
+      padding: 5px;
+      background: #f4f4f4;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <h1>Color Match Challenge</h1>
+    <div id="level">Level: 1</div>
+    <div id="timer">Time: 30s</div>
+    <div id="targetColor"></div>
+    <div id="playerColor"></div>
+    <div class="slider-container">
+      <label>R: <input type="range" class="slider" id="redSlider" min="0" max="255" value="128"></label>
+    </div>
+    <div class="slider-container">
+      <label>G: <input type="range" class="slider" id="greenSlider" min="0" max="255" value="128"></label>
+    </div>
+    <div class="slider-container">
+      <label>B: <input type="range" class="slider" id="blueSlider" min="0" max="255" value="128"></label>
+    </div>
+    <button id="matchButton">Match</button>
+    <div id="feedback"></div>
+    <label>
+      <input type="checkbox" id="colorBlindToggle">
+      Color Blind Mode
+    </label>
+    <div id="leaderboard">
+      <h3>Leaderboard</h3>
+      <ul id="leaderboardList"></ul>
+    </div>
+  </div>
+
+  <script>
+    let targetColor = {};
+    let playerColor = { r: 128, g: 128, b: 128 };
+    let timer;
+    let timeLeft = 30;
+    let level = 1;
+    let maxLevels = 5;
+    let scores = [];
+    let matchSound = new Audio('https://www.myinstants.com/media/sounds/success.mp3');
+    let gameOverSound = new Audio('https://www.myinstants.com/media/sounds/fail-trombone-01.mp3');
+    let startSound = new Audio('https://www.myinstants.com/media/sounds/game-start-610.mp3');
+    let highScoreSound = new Audio('https://www.myinstants.com/media/sounds/success.mp3');
+
+    function init() {
+      setTargetColor();
+      updatePlayerColor();
+      startTimer();
+      startSound.play();
+    }
+
+    function setTargetColor() {
+      targetColor = {
+        r: Math.floor(Math.random() * 256),
+        g: Math.floor(Math.random() * 256),
+        b: Math.floor(Math.random() * 256)
+      };
+      document.getElementById('targetColor').style.backgroundColor = `rgb(${targetColor.r}, ${targetColor.g}, ${targetColor.b})`;
+    }
+
+    function updatePlayerColor() {
+      playerColor = {
+        r: document.getElementById('redSlider').value,
+        g: document.getElementById('greenSlider').value,
+        b: document.getElementById('blueSlider').value
+      };
+      document.getElementById('playerColor').style.backgroundColor = `rgb(${playerColor.r}, ${playerColor.g}, ${playerColor.b})`;
+    }
+
+    function startTimer() {
+      timeLeft = 30;
+      document.getElementById('timer').innerText = `Time: ${timeLeft}s`;
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer').innerText = `Time: ${timeLeft}s`;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          gameOver();
+        }
+      }, 1000);
+    }
+
+    function matchColors() {
+      clearInterval(timer);
+      const score = 100 - Math.sqrt(
+        Math.pow(playerColor.r - targetColor.r, 2) +
+        Math.pow(playerColor.g - targetColor.g, 2) +
+        Math.pow(playerColor.b - targetColor.b, 2)
+      ) / (255 * Math.sqrt(3)) * 100;
+      document.getElementById('feedback').innerText = `Your score: ${Math.round(score)}`;
+      matchSound.play();
+      scores.push(Math.round(score));
+      updateLeaderboard();
+      if (score > 80) {
+        nextLevel();
+      } else {
+        gameOver();
+      }
+    }
+
+    function nextLevel() {
+      if (level < maxLevels) {
+        level++;
+        document.getElementById('level').innerText = `Level: ${level}`;
+        setTargetColor();
+        updatePlayerColor();
+        startTimer();
+      } else {
+        gameOver();
+      }
+    }
+
+    function gameOver() {
+      gameOverSound.play();
+      document.getElementById('feedback').innerText += " - Game Over!";
+      document.getElementById('matchButton').disabled = true;
+      if (scores.length > 0 && Math.max(...scores) >= 90) {
+        highScoreSound.play();
+      }
+    }
+
+    function updateLeaderboard() {
+      const leaderboardList = document.getElementById('leaderboardList');
+      leaderboardList.innerHTML = "";
+      scores.sort((a, b) => b - a).slice(0, 5).forEach(score => {
+        const li = document.createElement('li');
+        li.textContent = `Score: ${score}`;
+        leaderboardList.appendChild(li);
+      });
+    }
+
+    document.getElementById('redSlider').addEventListener('input', updatePlayerColor);
+    document.getElementById('greenSlider').addEventListener('input', updatePlayerColor);
+    document.getElementById('blueSlider').addEventListener('input', updatePlayerColor);
+    document.getElementById('matchButton').addEventListener('click', matchColors);
+
+    document.getElementById('colorBlindToggle').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('targetColor').style.filter = 'grayscale(100%)';
+      } else {
+        document.getElementById('targetColor').style.filter = 'none';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
